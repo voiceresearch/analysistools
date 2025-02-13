@@ -1,3 +1,5 @@
+#by Jeremias L. Thiele
+
 import os
 import subprocess
 import soundfile as sf
