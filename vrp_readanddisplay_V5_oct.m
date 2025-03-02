@@ -120,33 +120,35 @@ line(minFreq(~TFmin),minSPLl(~TFmin),'LineWidth',3,'Color', 'b')
 fname=[name(1:end-4)];
 fname=strrep(fname,'.','_');
 clear ExcelContent;
-smax = size(maxSPLl(~TFmax),2);
-smin = size(minFreq(~TFmin),2);
-if (smax > smin)
-nzero=zeros(1,smax-smin);
-minF = [minFreq(~TFmin),nzero];
-minL = [minSPLl(~TFmin),nzero];
+%smax = size(maxSPLl(~TFmax),2);
+%smin = size(minFreq(~TFmin),2);
+%if (smax > smin)
+%nzero=zeros(1,smax-smin);
+%minF = [minFreq(~TFmin),nzero];
+%minL = [minSPLl(~TFmin),nzero];
+%maxF = maxFreq(~TFmax);
+%maxL = maxSPLl(~TFmax);
+%elseif (smax < smin)
+%nzero=zeros(1,smin-smax);
+%minF = minFreq(~TFmin);
+%minL = minSPLl(~TFmin);
+%maxF = [maxFreq(~TFmax),nzero];
+%maxL = [maxSPLl(~TFmax),nzero];
+%else
 maxF = maxFreq(~TFmax);
 maxL = maxSPLl(~TFmax);
-elseif (smax < smin)
-nzero=zeros(1,smin-smax);
 minF = minFreq(~TFmin);
 minL = minSPLl(~TFmin);
-maxF = [maxFreq(~TFmax),nzero];
-maxL = [maxSPLl(~TFmax),nzero];
-else
-maxF = maxFreq(~TFmax);
-maxL = maxSPLl(~TFmax);
-minF = minFreq(~TFmin);
-minL = minSPLl(~TFmin);
-end
+%end
 %ExcelContent= [[maxFreq(~TFmax), minFreq(~TFmin)];[maxSPLl(~TFmax),minSPLl(~TFmin)]];
 ExcelContent= [{[path,'VRP_',fname]}];
 rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A1:A1');
 ExcelContent= [{'fsoft'},{'Lsoft'},{'floud'},{'Lloud'}];
 rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A2:D2');
-ExcelContent= [[minF'],[minL'],[maxF'],[maxL']];
-rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A3:D1000');
+ExcelContent= [[minF'],[minL']];
+rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A3:B1000');
+ExcelContent= [[maxF'],[maxL']];
+rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'C3:D1000');
 
 ca={"< A1/,A","< A2/A", "< A3/a", "< A4/a'", "< A5/a''", "< A6/a'''"};
 cdes={"< Db2/Des", "< Db3/des", "< Db4/des'", "< Db5/des''", "< Db6/des'''"};
