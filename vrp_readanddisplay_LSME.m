@@ -1,10 +1,10 @@
 clear all
-%Fontsize=7; % Thinkpad X1
-Fontsize=16; % PC InstAS 300%
-fontreduction = 9;
+Fontsize=4; fontreduction = 2;% Thinkpad X1
+%Fontsize=16; fontreduction = 9; % PC InstAS 300%
 
-nspline = 10; % nodes of the spline segments (6)
-outrange = 90; % average range of values to remove outliers (90)
+nav = 5; % number of averages for the outlier removal (3)
+nspline = 10; % nodes of the spline segments (10)
+%outrange = 90; % average range of values to remove outliers (90)
 
 
 % requires package statistics for VRP cleaning
@@ -98,14 +98,14 @@ for partidx = 1:size(partlist,2)
     Lvec = [Lrangemax:-1:Lrangemin];
     [M,c]=contour(freqvec,Lvec,VPR);
 
-    xlabel('Frequenz (Hz)')
+    xlabel('Frequency (Hz)')
     ylabel('SPL (dB)')
     title([strrep(fname,'_','\_'), ' - frange: ',num2str(fmin), '..',num2str(fmax), ' = ',num2str(fmax-fmin), 'Hz, Lrange: ',num2str(Lmin), '..',num2str(Lmax), ' = ',num2str(Lmax-Lmin), 'dB']);
     grid on
     set(gca,"XScale","log")
     set(gca,"XMinorGrid","on")
     set (gca,"yminorgrid","on");
-    set(gca,"Fontsize",5)
+%    set(gca,"Fontsize",5)
     set(gca,"Xlim",[fRangemin-1 fRangemax+100])
     set(gca,"Ylim",[Lrangemin-1 Lrangemax+1])
 
@@ -124,22 +124,62 @@ for partidx = 1:size(partlist,2)
     pFreq = freqvec(find(pSPL));
     fSPLl  = fSPL(find(fSPL));
     fFreq = freqvec(find(fSPL));
-    line(pFreq,pSPLl,'LineWidth',1,'Color', 'c')
-    line(fFreq,fSPLl,'LineWidth',1,'Color', 'm')
+    line(pFreq,pSPLl,'LineWidth',0.5,'Color', 'c')
+    line(fFreq,fSPLl,'LineWidth',0.5,'Color', 'm')
 
-    TFmax = isoutlier (fSPLl, "movmedian", outrange, "SamplePoints", fFreq);
-    TFmin = isoutlier (pSPLl, "movmedian", outrange, "SamplePoints", pFreq);
-    fF = fFreq(~TFmax); % Frequencies of forte curve
-    fL = fSPLl(~TFmax); % Levels of forte curve
-    pF = pFreq(~TFmin); % Frequencies of piano curve
-    pL = pSPLl(~TFmin); % Levels of piano curve
+    % log Frequency axis for cleaning
+    datapraw=[log10(pFreq)',pSPLl'];
+    datafraw=[log10(fFreq)',fSPLl'];
 
-    line(fFreq(~TFmax),fSPLl(~TFmax),'LineWidth',1,'Color',"r")
-    line(pFreq(~TFmin),pSPLl(~TFmin),'LineWidth',1,'Color',"b")
+
+    % Schwellenwert für Ausreißer
+    threshold = 2;
+    pF=[];pL=[];fF=[];fL=[];
+    chunksizeraw = size(datapraw,1)/nav;
+    for (segidx = 1:nav) % iterative averaging
+      if (segidx==1)
+         idxmin = 1
+      else
+         idxmin = floor((segidx-1)*chunksizeraw)+1
+      endif
+      idxmax = floor(segidx*chunksizeraw)
+      datap=datapraw(idxmin:idxmax,:);
+      dataf=datafraw(idxmin:idxmax,:);
+      % Mittelwerte und Standardabweichungen berechnen
+      mu = mean(datap);
+      sigma = std(datap);
+      % Z-Scores berechnen
+      z_scores = abs((datap - mu) ./ sigma);
+      % Entfernen der Ausreißer (wenn Z-Score in einer der Spalten zu hoch ist)
+      rows_to_keep = all(z_scores <= threshold, 2);
+      datap_cleaned = datap(rows_to_keep, :);
+      pF = [pF; datap_cleaned(:,1)];
+      pL = [pL; datap_cleaned(:,2)];
+      % Mittelwerte und Standardabweichungen berechnen
+      mu = mean(dataf);
+      sigma = std(dataf);
+      % Z-Scores berechnen
+      z_scores = abs((dataf - mu) ./ sigma);
+      % Entfernen der Ausreißer (wenn Z-Score in einer der Spalten zu hoch ist)
+      rows_to_keep = all(z_scores <= threshold, 2);
+      dataf_cleaned = dataf(rows_to_keep, :);
+      fF = [fF; dataf_cleaned(:,1)];
+      fL = [fL; dataf_cleaned(:,2)];
+  %    TFmax = isoutlier (fSPLl, "movmedian", outrange, "SamplePoints", fFreq);
+  %    TFmin = isoutlier (pSPLl, "movmedian", outrange, "SamplePoints", pFreq);
+  %    fF = fFreq(~TFmax); % Frequencies of forte curve
+  %    fL = fSPLl(~TFmax); % Levels of forte curve
+  %    pF = pFreq(~TFmin); % Frequencies of piano curve
+  %    pL = pSPLl(~TFmin); % Levels of piano curve
+
+  endfor
+    pF=pF';pL=pL';fF=fF';fL=fL';
+    line(fF,fL,'LineWidth',0.5,'Color',"r")
+    line(pF,pL,'LineWidth',0.5,'Color',"b")
     hold on
     % Transformation der x-Koordinaten auf logarithmische Skala
-    fF = log10(fF);
-    pF = log10(pF);
+    %fF = log10(fF);
+    %pF = log10(pF);
 
     % Spline-Interpolation
 
@@ -178,15 +218,15 @@ for partidx = 1:size(partlist,2)
 
     % Ausgabe der Ergebnisse
 
-    plot (ffspline,fLspline,'LineWidth',3,"r");
-    plot (pfspline,pLspline,'LineWidth',3,"b");
+    plot (ffspline,fLspline,'LineWidth',2,"r");
+    plot (pfspline,pLspline,'LineWidth',2,"b");
 
     disp(['Schwerpunkt x-Koordinate: ', num2str(xs)]);  % zurücktransformieren
     disp(['Schwerpunkt y-Koordinate: ', num2str(ys)]);
 
     % Elipsen-Berechnung
     [X,Y] = calculateEllipse(xs,ys, 10, 1, 0);
-    plot(X, Y,'LineWidth',5,'g');
+    plot(X, Y,'LineWidth',2,'g');
 
     % evaluate Euclidian distances
     lf = [(ffspline(1)+(ffspline(2)))/2, (fLspline(1)+(fLspline(2)))/2];
@@ -195,11 +235,11 @@ for partidx = 1:size(partlist,2)
     mf = [(ffspline(idxmf)+(ffspline(idxmf+1)))/2, (fLspline(idxmL)+(fLspline(idxmL+1)))/2];
     hf = [(ffspline(end-1)+(ffspline(end)))/2, (fLspline(end-1)+(fLspline(end)))/2];
     line([xs, lf(1)], [ys, lf(2)], "linestyle", "-", ...
-    "LineWidth",3, "color", "g")
+    "LineWidth",1, "color", "g")
     line([xs, mf(1)], [ys, mf(2)], "linestyle", "-", ...
-    "LineWidth",3, "color", "g")
+    "LineWidth",1, "color", "g")
     line([xs, hf(1)], [ys, hf(2)], "linestyle", "-", ...
-    "LineWidth",3, "color", "g")
+    "LineWidth",1, "color", "g")
 
     lp = [(pfspline(1)+(pfspline(2)))/2, (pLspline(1)+(pLspline(2)))/2];
     idxmf = floor(size(pfspline,2)/2);
@@ -207,11 +247,11 @@ for partidx = 1:size(partlist,2)
     mp = [(pfspline(idxmf)+(pfspline(idxmf+1)))/2, (pLspline(idxmL)+(pLspline(idxmL+1)))/2];
     hp = [(pfspline(end-1)+(pfspline(end)))/2, (pLspline(end-1)+(pLspline(end)))/2];
     line([xs, lp(1)], [ys, lp(2)], "linestyle", "-", ...
-    "LineWidth",3, "color", "g")
+    "LineWidth",1, "color", "g")
     line([xs, mp(1)], [ys, mp(2)], "linestyle", "-", ...
-    "LineWidth",3, "color", "g")
+    "LineWidth",1, "color", "g")
     line([xs, hp(1)], [ys, hp(2)], "linestyle", "-", ...
-    "LineWidth",3, "color", "g")
+    "LineWidth",1, "color", "g")
 
     hold off
 
@@ -239,13 +279,13 @@ for partidx = 1:size(partlist,2)
       text(2^fidx*fa, ypos, ca(fidx+1),"Fontsize",Fontsize-fontreduction)
       text(2^fidx*fdes, ypos, cdes(fidx+1),"Fontsize",Fontsize-fontreduction)
       text(2^fidx*ff, ypos, cf(fidx+1),"Fontsize",Fontsize-fontreduction)
-      line([2^fidx*fa, 2^fidx*fa],[Lrangemin-1 Lrangemax+1],'LineWidth',1,'LineStyle',':','Color', 'g')
-      line([2^fidx*fdes, 2^fidx*fdes],[Lrangemin-1 Lrangemax+1],'LineWidth',1,'LineStyle',':','Color', 'g')
-      line([2^fidx*ff, 2^fidx*ff],[Lrangemin-1 Lrangemax+1],'LineWidth',1,'LineStyle',':','Color', 'g')
+      line([2^fidx*fa, 2^fidx*fa],[Lrangemin-1 Lrangemax+1],'LineWidth',0.1,'LineStyle',':','Color', 'g')
+      line([2^fidx*fdes, 2^fidx*fdes],[Lrangemin-1 Lrangemax+1],'LineWidth',0.1,'LineStyle',':','Color', 'g')
+      line([2^fidx*ff, 2^fidx*ff],[Lrangemin-1 Lrangemax+1],'LineWidth',0.1,'LineStyle',':','Color', 'g')
     endfor
 
     set(gca,"Fontsize",Fontsize)
-    saveas(gcf,[path,fname(1:end-4),'_VRP.png'])
+    print(gcf, [path,fname(1:end-4),'_VRP.png'], '-r1200');
   endfor
   cd ..
 endfor
