@@ -138,11 +138,11 @@ for partidx = 1:size(partlist,2)
     chunksizeraw = size(datapraw,1)/nav;
     for (segidx = 1:nav) % iterative averaging
       if (segidx==1)
-         idxmin = 1
+         idxmin = 1;
       else
-         idxmin = floor((segidx-1)*chunksizeraw)+1
+         idxmin = floor((segidx-1)*chunksizeraw)+1;
       endif
-      idxmax = floor(segidx*chunksizeraw)
+      idxmax = floor(segidx*chunksizeraw);
       datap=datapraw(idxmin:idxmax,:);
       dataf=datafraw(idxmin:idxmax,:);
       % Mittelwerte und Standardabweichungen berechnen
@@ -214,6 +214,8 @@ for partidx = 1:size(partlist,2)
     % Rücktransformation der Frequenzachse von log nach lin
     ffspline = 10.^(ffspline);
     pfspline = 10.^(pfspline);
+    fF = 10.^(fF);
+    pF = 10.^(pF);
     ys = y_center;
 
     % Ausgabe der Ergebnisse
@@ -221,8 +223,8 @@ for partidx = 1:size(partlist,2)
     plot (ffspline,fLspline,'LineWidth',2,"r");
     plot (pfspline,pLspline,'LineWidth',2,"b");
 
-    disp(['Schwerpunkt x-Koordinate: ', num2str(xs)]);  % zurücktransformieren
-    disp(['Schwerpunkt y-Koordinate: ', num2str(ys)]);
+    disp(['Schwerpunkt Frequenzen: ', num2str(xs), ' Hz']);  % zurücktransformieren
+    disp(['Schwerpunkt Pegel: ', num2str(ys), ' dB']);
 
     % Elipsen-Berechnung
     [X,Y] = calculateEllipse(xs,ys, 10, 1, 0);
@@ -254,16 +256,35 @@ for partidx = 1:size(partlist,2)
     "LineWidth",1, "color", "g")
 
     hold off
-
+    fnameall = 'all';
     clear ExcelContent;
-    ExcelContent= [{[actpart,'\',fname]}];
-    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A1:A1');
-    ExcelContent= [{'fsoft'},{'Lsoft'},{'floud'},{'Lloud'}];
-    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A2:D2');
-    ExcelContent= [[pF'],[pL']];
-    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A3:B1000');
-    ExcelContent= [[fF'],[fL']];
-    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'C3:D1000');
+    % export line values
+%    ExcelContent= [{[actpart,'\',fname]}]; % name of file
+    ExcelContent= [{['Export of VRP data in ',path,actpart,'\']}]; % 1st line for export
+    rstatus = xlswrite ([path,'VRP_',fnameall,'_',actpart], ExcelContent,'A1:A1');
+
+    % export Lingwaves values
+    ExcelContent= [{'Subject'},{'Status'},{'fmin'},{'fmax'},{'deltaf'},{'Lmin'},{'Lmax'},{'delta L'}]; % extreme values labels
+    rstatus = xlswrite ([path,'VRP_',fnameall,'_',actpart], ExcelContent,'A2:H2');
+    ExcelContent= [{fname(1:3)},{fname(5)},{num2str(fmin)},{num2str(fmax)},{num2str(fmax-fmin)},{num2str(Lmin)},{num2str(Lmax)},{num2str(Lmax-Lmin)}]; % extreme values
+    rstatus = xlswrite ([path,'VRP_',fnameall,'_',actpart], ExcelContent,['A',num2str(2+recidx),':H',num2str(2+recidx)]);
+
+    % export average values
+    ExcelContent= [{'fav'},{'Lav'},{'fpl'},{'Lpl'},{'fpm'},{'Lpm'},{'fph'},{'Lph'}, ...
+                                 {'ffl'},{'Lfl'},{'ffm'},{'Lfm'},{'ffh'},{'Lfh'}]; % average values labels
+    rstatus = xlswrite ([path,'VRP_',fnameall,'_',actpart], ExcelContent,'I2:V2');
+    ExcelContent= [{num2str(xs)},{num2str(ys)},...
+     {num2str(lp(1))},{num2str(lp(2))},{num2str(mp(1))},{num2str(mp(2))},{num2str(hp(1))},{num2str(hp(2))} ...
+    ,{num2str(lf(1))},{num2str(lf(2))},{num2str(mf(1))},{num2str(mf(2))},{num2str(hf(1))},{num2str(hf(2))}]; % average values
+    rstatus = xlswrite ([path,'VRP_',fnameall,'_',actpart], ExcelContent,['I',num2str(2+recidx),':V',num2str(2+recidx)]);
+
+    % export line values
+%    ExcelContent= [{'fsoft'},{'Lsoft'},{'floud'},{'Lloud'}];
+%    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A4:D4');
+%    ExcelContent= [[pF'],[pL']];
+%    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'A5:B1000');
+%    ExcelContent= [[fF'],[fL']];
+%    rstatus = xlswrite ([path,'VRP_',fname], ExcelContent,'C5:D1000');
 
     ca={"< A1/,A","< A2/A", "< A3/a", "< A4/a'", "< A5/a''", "< A6/a'''"};
     cdes={"< Db2/Des", "< Db3/des", "< Db4/des'", "< Db5/des''", "< Db6/des'''"};
