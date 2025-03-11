@@ -48,9 +48,9 @@ for partidx = 1:size(partlist,2)
 
     csvfile=[path, fname_org];
     fid = fopen(fname_org);
-    vrptext = textscan(fid,"%s");
+    vrptextraw = textscan(fid,"%s");
     fclose(fid);
-    vrptext = cell2mat(vrptext);
+    vrptext = cell2mat(vrptextraw);
 
     offset = 60;
     fRangemin = 0;
@@ -307,6 +307,31 @@ for partidx = 1:size(partlist,2)
 
     set(gca,"Fontsize",Fontsize)
     print(gcf, [path,fname(1:end-4),'_VRP.png'], '-r1200');
+
+    % export wav file
+    input_file = fname_org;
+    output_file = [fname_org,'.wav'];
+    % Datei als Binärdaten einlesen
+    fid = fopen(input_file, 'rb');
+    if fid == -1
+        error("Konnte Datei nicht öffnen.");
+    end
+    binary_data = fread(fid, 'uint8');
+    fclose(fid);
+    riff_index = strfind(char(binary_data'), 'RIFF');
+    if isempty(riff_index)
+        error("Keine RIFF-Signatur gefunden.");
+    end
+
+    % Alles ab der ersten "RIFF"-Position als WAV-Datei speichern
+    fid = fopen(output_file, 'wb');
+    if fid == -1
+        error("Konnte Ausgabe-Datei nicht erstellen.");
+    end
+    fwrite(fid, binary_data(riff_index(1):end), 'uint8');
+    fclose(fid);
+
+    fprintf("WAV-Datei wurde erfolgreich extrahiert: %s\n", output_file);
   endfor
   cd ..
 endfor
